@@ -8,6 +8,12 @@ Analyze H&M's jewelry customer behavior, segment audiences, and build predictive
 
 **Data Source**: [Kaggle H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data)
 
+## 📊 Executive Project Presentation
+
+For a business-focused overview of this analysis, including key insights, strategic recommendations, and real-world applications, please view the presentation slides:
+
+👉 [👉 View Business Insights & Strategy Deck]([YOUR_GOOGLE_DRIVE_LINK](https://drive.google.com/file/d/17o15b_lIpAVwHXFB-mPJZM-InBD9gLYc/view?usp=sharing))
+
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Data Processing Pipeline](#data-processing-pipeline)
