@@ -12,7 +12,7 @@ Analyze H&M's jewelry customer behavior, segment audiences, and build predictive
 
 For a business-focused overview of this analysis, including key insights, strategic recommendations, and real-world applications, please view the presentation slides:
 
-👉 [👉 View Business Insights & Strategy Deck]([YOUR_GOOGLE_DRIVE_LINK](https://drive.google.com/file/d/17o15b_lIpAVwHXFB-mPJZM-InBD9gLYc/view?usp=sharing))
+[👉 View Business Insights & Strategy Deck](https://drive.google.com/file/d/17o15b_lIpAVwHXFB-mPJZM-InBD9gLYc/view?usp=sharing))
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
