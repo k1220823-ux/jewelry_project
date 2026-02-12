@@ -10,7 +10,9 @@ Analyze H&M's jewelry customer behavior, segment audiences, and build predictive
 
 ## Executive Project Presentation
 
-[View Business Insights & Strategy Deck](https://drive.google.com/file/d/17o15b_lIpAVwHXFB-mPJZM-InBD9gLYc/view?usp=sharing))
+This slide deck provides a business-focused overview of the analysis, highlighting key customer insights, modeling results, and strategic recommendations for data-driven marketing decisions.
+
+👉 [View Business Insights & Strategy Deck](https://drive.google.com/file/d/17o15b_lIpAVwHXFB-mPJZM-InBD9gLYc/view?usp=sharing)
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
