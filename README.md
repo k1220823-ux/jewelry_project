@@ -2,122 +2,297 @@
 
 <img src="data/hm_logo.png" alt="Description" width="150" />
 
-Author: Serena Chi-yu Chou ([Email](K1220823@gmail.com) [LinkedIn](https://www.linkedin.com/in/serena-chou-6a3701184))
+Author: Serena Chi-Yu Chou ([Email](mailto:K1220823@gmail.com) | [LinkedIn](https://www.linkedin.com/in/serena-chou-6a3701184))
 
 Analyze H&M's jewelry customer behavior, segment audiences, and build predictive models to inform data-driven digital marketing decisions.
 
 **Data Source**: [Kaggle H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data)
 
+---
+
 ## Executive Project Presentation
 
-This slide deck provides a business-focused overview of the analysis, highlighting key customer insights, modeling results, and strategic recommendations for data-driven marketing decisions.
+This slide deck provides a business-focused overview of the analysis, highlighting key customer insights, modeling results, and strategic recommendations.
 
 👉 [View Business Insights & Strategy Deck](https://drive.google.com/file/d/1Gg1WW2XOQD5-wljZgJaezi8YqN10Y6NI/view?usp=drive_link)
 
-## Table of Contents
-1. [Project Overview](#project-overview)
-2. [Data Processing Pipeline](#data-processing-pipeline)
-   - [Data Sources](#data-sources) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))
-   - [Cleaning and Preprocessing](#cleaning-and-preprocessing) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))
-   - [Feature Engineering](#feature-engineering) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
-   - [Train/Validation/Test Split](#trainvalidationtest-split) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
-3. [Modeling and Evaluation](#modeling-and-evaluation)
-   - [Models Evaluated](#models-evaluated) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
-   - [Training Setup and Validation Strategy](#training-setup-and-validation-strategy) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
-   - [Hyperparameter Tuning](#hyperparameter-tuning) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
-4. [Findings Summary](#findings-summary) (from [`02_Jewelry_Model.ipynb`](02_Jewelry_Model.ipynb))
+---
+
+# Table of Contents
+
+1. [Project Overview](#project-overview)  
+2. [Data Processing Pipeline](#data-processing-pipeline)  
+   - [Data Sources](#data-sources) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))  
+   - [Cleaning and Preprocessing](#cleaning-and-preprocessing) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))  
+   - [Feature Engineering](#feature-engineering) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
+   - [Train / Validation / Test Split](#train-validation-test-split) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
+3. [Modeling and Evaluation](#modeling-and-evaluation)  
+   - [Models Evaluated](#models-evaluated) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
+   - [Threshold Selection Strategy](#threshold-selection-strategy)  
+   - [Neural Network Hyperparameter Tuning](#neural-network-hyperparameter-tuning)  
+   - [Final Model Evaluation](#final-model-evaluation)  
+4. [Findings Summary](#findings-summary)  
 5. [Reproducibility Instructions](#reproducibility-instructions)
 
-## Project Overview
-Jewelry sales represent a unique and valuable segment of the retail market, characterized by high-value transactions and diverse customer preferences. This project aims to analyze and model jewelry sales data to uncover actionable insights into customer behavior, product performance, and sales trends. By leveraging advanced data processing techniques and machine learning models, this project demonstrates a rigorous and methodical approach to solving real-world business problems.
+---
 
-The dataset includes customer demographics, product details, and transaction records, with a specific focus on identifying and analyzing jewelry-related products. The ultimate goal is to build interpretable and high-performing predictive models to support data-driven decision-making in the jewelry retail industry.
+# Project Overview
 
-## Data Processing Pipeline
-**Skills Used**: `Pandas`, Unix File Handling `awk`
+Jewelry products represent a valuable segment within the fashion retail market. Understanding which customers are most likely to purchase jewelry allows retailers to design targeted marketing campaigns and improve product positioning.
 
-The data processing pipeline, implemented in `01_Data_Preprocessing.ipynb`, ensures the dataset is clean, well-structured, and ready for analysis and modeling. The pipeline is designed to be modular, reusable, and efficient. 
+This project builds a **machine learning pipeline to predict jewelry purchase propensity** using the H&M transaction dataset. Transaction-level purchase records are transformed into customer-level behavioral features and used to train multiple classification models.
 
-Highlight: the original transaction file is too large, therefore we used in-place streaming UNIX operation with `awk` to downsample 10% of the file without extra memory requirements.
+The goals of the project are:
 
-### Data Sources
+- Identify behavioral signals associated with jewelry purchasing
+- Compare multiple machine learning models
+- Implement a structured evaluation framework
+- Demonstrate a reproducible machine learning workflow
 
-The analysis is based on three key datasets:
-- **Customers Dataset**: Contains demographic and transactional information about customers.
-- **Articles Dataset**: Includes product details, such as product type and group names, with a focus on identifying jewelry items.
-- **Transactions Dataset**: Records of customer purchases, including transaction dates and prices.
+---
 
-### Cleaning and Preprocessing
-**Skills Used**: `Pandas`
+# Data Processing Pipeline
 
-- **Column Standardization**: Column names were standardized by converting to lowercase, removing whitespace, and replacing spaces with underscores for consistency.
-- **Handling Missing Values**: Missing data was addressed using strategies such as median or mean imputation for numerical columns, or dropping rows with excessive missing values.
-- **Type Conversion**: Columns were converted to appropriate data types, such as datetime for date columns, ensuring accurate analysis and modeling.
+**Skills Used:** `Pandas`, Unix File Handling (`awk`)
 
-### Feature Engineering
-**Skills Used**: `Pandas`, Feature Engineering
+The raw H&M transaction dataset is extremely large. To enable efficient analysis, a **streaming Unix pipeline using `awk`** was used to downsample approximately 10% of the dataset without loading the full file into memory.
 
-- **Date Features**: Extracted year, month, and day components from date columns to enable temporal analysis.
-- **Categorical Encoding**: Applied one-hot encoding to categorical columns with low cardinality, ensuring compatibility with machine learning models.
+The preprocessing pipeline is implemented in:
 
-### Train/Validation/Test Split
-**Skills Used**: `Pandas`, `Sklearn`
 
-The data was split into training, validation, and test sets to ensure robust model evaluation and prevent overfitting. This step ensures that the models are tested on unseen data, providing a realistic assessment of their performance.
+---
 
-## Modeling and Evaluation
-The modeling and evaluation process, detailed in `02_Jewelry_Model.ipynb`, highlights a systematic approach to building and comparing machine learning models.
+## Data Sources
 
-### Models Evaluated
-**Skills Used**: `Sklearn`, Machine Learning
+The analysis integrates three primary datasets:
 
-- **Logistic Regression**: A simple yet interpretable model, suitable for binary classification tasks.
-- **Decision Tree**: A tree-based model that provides interpretable decision rules.
-- **Random Forest**: An ensemble of decision trees, typically offering improved accuracy.
-- **Neural Network**: A flexible model capable of capturing complex patterns in the data.
+### Customers Dataset
 
-### Training Setup and Validation Strategy
+Contains customer demographic information and unique identifiers.
 
-- **Data Splitting**: The dataset was split into training and test sets to evaluate model performance on unseen data.
-- **Cross-Validation**: Cross-validation was employed to ensure the robustness of the results and to mitigate the risk of overfitting.
+### Articles Dataset
 
-### Hyperparameter Tuning
+Includes product metadata such as:
 
-- **Optimization**: Hyperparameters for the Logistic Regression model were tuned to achieve optimal performance, balancing bias and variance.
+- product type  
+- product group name  
+- article description  
 
-## Findings Summary
-This section highlights the key findings from the modeling process, focusing on the performance of the evaluated models across various metrics.
+These attributes are used to identify jewelry items.
 
-| Model                | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
-|----------------------|----------|-----------|--------|----------|---------|
-| Logistic Regression  | 0.85     | 0.88      | 0.83   | 0.85     | 0.90    |
-| Decision Tree        | 0.80     | 0.82      | 0.78   | 0.80     | 0.85    |
-| Random Forest        | 0.89     | 0.91      | 0.87   | 0.89     | 0.93    |
-| Neural Network       | 0.86     | 0.87      | 0.84   | 0.85     | 0.91    |
-| **Best Model**       | **0.89** | **0.91**  | **0.87** | **0.89** | **0.93** |
+### Transactions Dataset
 
-### Key Insights
-- The Random Forest model achieved the best performance with an accuracy of 89% and an ROC-AUC of 0.93, making it the most effective model for this analysis.
-- Logistic Regression provided a strong balance between interpretability and performance, making it a viable option for scenarios where model explainability is critical.
-- The Neural Network model showed competitive performance but may require further tuning to outperform Random Forest.
-- Decision Tree, while interpretable, underperformed compared to the other models, indicating potential overfitting or lack of generalization.
-- Future work could focus on hyperparameter tuning for the Neural Network and exploring ensemble methods to further improve performance.
+Contains transaction-level purchase records including:
 
-## Reproducibility Instructions
-To reproduce the results and insights presented in this project, follow these steps:
+- `customer_id`
+- `article_id`
+- `price`
+- `transaction_date`
 
-1. **Set Up the Environment**
-   - Install the required Python packages using the following command:
-     ```bash
-     pip install -r requirements.txt
-     ```
+---
 
-2. **Run the Notebooks**
-   - Execute the notebooks in the following order:
-     1. `01_Data_Preprocessing.ipynb`: Preprocess the raw data and save the cleaned datasets.
-     2. `02_Jewelry_Model.ipynb`: Train and evaluate the predictive models.
+## Cleaning and Preprocessing
 
-3. **Verify Results**
-   - Compare the outputs in the `results/` directory with the findings summarized in this README.
+Key preprocessing steps include:
+
+### Column Standardization
+
+Column names were standardized by:
+
+- converting to lowercase  
+- removing whitespace  
+- replacing spaces with underscores  
+
+### Handling Missing Values
+
+Missing values were handled using:
+
+- mean or median imputation for numeric columns
+- removal of rows with excessive missing data
+
+### Type Conversion
+
+Date columns were converted to `datetime` format to support temporal feature extraction.
+
+---
+
+## Feature Engineering
+
+Transaction-level data was aggregated into **customer-level behavioral features**.
+
+Feature categories include:
+
+- purchase frequency
+- total spending
+- average purchase value
+- product diversity
+
+Example aggregation logic:
+
+```python
+customer_features = transactions.groupby("customer_id").agg({
+    "price": ["count", "sum", "mean"],
+    "article_id": "nunique"
+})
+
+## Train / Validation / Test Split
+
+The dataset is divided using a **stratified split** to ensure class balance across all subsets.
+
+| Dataset | Purpose |
+|--------|--------|
+| Train (70%) | Model training |
+| Validation (15%) | Threshold selection and model tuning |
+| Test (15%) | Final model evaluation |
+
+Stratification ensures that the proportion of positive and negative classes remains consistent across splits.
+
+This design prevents **data leakage** and allows unbiased evaluation on unseen data.
+
+---
+
+# Modeling and Evaluation
+
+The modeling workflow is implemented in:
+
+`02_Jewelry_Model_Finalised.ipynb`
+
+Multiple machine learning models are trained and compared using a consistent evaluation framework.
+
+---
+
+## Models Evaluated
+
+Four classification models were evaluated.
+
+### Logistic Regression
+A linear baseline classifier that provides strong interpretability and serves as a benchmark model.
+
+### Decision Tree
+A tree-based classifier capable of generating interpretable decision rules based on feature splits.
+
+### Random Forest
+An ensemble learning method that combines multiple decision trees to improve predictive performance and reduce overfitting.
+
+### Neural Network (MLPClassifier)
+A multi-layer perceptron capable of capturing nonlinear relationships in customer behavior patterns.
+
+---
+
+## Threshold Selection Strategy
+
+Most classifiers output predicted probabilities rather than class labels.
+
+To determine the optimal classification boundary, a **threshold sweep** was performed on the validation set for the following models:
+
+- Logistic Regression  
+- Decision Tree  
+- Random Forest  
+
+Example thresholds evaluated: 0.1, 0.2, 0.3 ... 0.9
+
+
+Performance metrics such as **precision, recall, and F1-score** were evaluated across thresholds to determine the most suitable operating point.
+
+The selected threshold was then applied when evaluating the model on the test dataset.
+
+---
+
+## Neural Network Hyperparameter Tuning
+
+Unlike the other models, the neural network was tuned using **RandomizedSearchCV**.
+
+The workflow was:
+
+1. Perform hyperparameter search using the validation fold  
+2. Identify the best hyperparameter configuration  
+3. Retrain the neural network using **Train + Validation data**  
+4. Evaluate the final model on the **held-out test set**
+
+This approach ensures that the test dataset remains completely unseen during model selection.
+
+---
+
+## Final Model Evaluation
+
+Model performance is evaluated using multiple metrics:
+
+- Accuracy
+- Precision
+- Recall
+- F1 Score
+- ROC-AUC
+- PR-AUC
+
+Final model comparison is performed **only on the test set** to ensure unbiased out-of-sample performance estimation.
+
+---
+
+# Findings Summary
+
+| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC |
+|------|------|------|------|------|------|
+| Logistic Regression | 0.688458 | 0.021912 | 0.540866 | 0.042118 | 0.656260 |
+| Neural Network (best params) | 0.745550 | 0.023273 | 0.466056 | 0.044333 | 0.654290 |
+| Decision Tree | 0.685353 | 0.021345 | 0.531711 | 0.041042 | 0.640591 |
+| Random Forest | 0.787717 | 0.023890 | 0.395489 | 0.045058 | 0.635691 |
+| **Best Model** | **Random Forest** | **0.023890** | **0.395489** | **0.045058** | **0.635691** |
+
+
+Actual results can be reproduced by executing the modeling notebook.
+
+General observations include:
+
+- Ensemble models typically outperform single decision trees.
+- Logistic regression provides strong baseline interpretability.
+- Neural networks capture nonlinear behavioral signals but require careful tuning.
+
+---
+
+# Reproducibility Instructions
+
+To reproduce the analysis:
+
+### 1. Install Dependencies
+pip install -r requirements.txt
+
+### 2. Run the Notebooks
+
+Execute the notebooks in the following order:
+
+01_Data_Preprocessing.ipynb
+02_Jewelry_Model_Finalised.ipynb
+
+
+
+The preprocessing notebook prepares the modeling dataset.
+
+The modeling notebook performs:
+
+- train / validation / test split  
+- model training  
+- threshold sweep  
+- neural network hyperparameter tuning  
+- final test evaluation  
+
+---
+
+### 3. Verify Results
+
+Outputs generated in the notebook should match the evaluation metrics summarized in this repository.
+
+---
+
+# Project Significance
+
+This project demonstrates a complete applied machine learning workflow including:
+
+- large-scale data preprocessing
+- feature engineering from transactional retail data
+- structured model comparison
+- hyperparameter tuning
+- unbiased out-of-sample evaluation
+
+The methodology reflects best practices used in real-world retail analytics and predictive modeling.
 
 This project reflects Serena Chou’s commitment to methodological rigor, clear communication, and impactful data analysis. For any questions or feedback, please feel free to open an issue in this repository.
