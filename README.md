@@ -57,7 +57,7 @@ The goals of the project are:
 
 The raw H&M transaction dataset is extremely large. To enable efficient analysis, a **streaming Unix pipeline using `awk`** was used to downsample approximately 10% of the dataset without loading the full file into memory.
 
-The preprocessing pipeline is implemented in:
+The preprocessing pipeline is implemented in: 01_Data_Preprocessing.ipynb
 
 
 ---
@@ -134,6 +134,7 @@ customer_features = transactions.groupby("customer_id").agg({
     "price": ["count", "sum", "mean"],
     "article_id": "nunique"
 })
+These features form the model input matrix used for training machine learning classifiers.
 
 ## Train / Validation / Test Split
 
