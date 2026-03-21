@@ -1,299 +1,223 @@
-# Jewelry Sales Analysis and Modeling
+# Jewelry Purchase Propensity Model
 
-<img src="data/hm_logo.png" alt="Description" width="150" />
+<img src="data/hm_logo.png" alt="H&M Logo" width="150" />
 
-Author: Serena Chi-Yu Chou ([Email](mailto:K1220823@gmail.com) | [LinkedIn](https://www.linkedin.com/in/serena-chou-6a3701184))
+**Author:** Serena Chi-yu Chou &nbsp;|&nbsp; [Email](mailto:K1220823@gmail.com) &nbsp;|&nbsp; [LinkedIn](https://www.linkedin.com/in/serena-chou-6a3701184)
 
-Analyze H&M's jewelry customer behavior, segment audiences, and build predictive models to inform data-driven digital marketing decisions.
+> Predicting which H&M customers are likely to purchase jewelry in their next transaction — using transaction-level supervised learning on 3.1M+ records, with careful handling of class imbalance and data leakage.
 
-**Data Source**: [Kaggle H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data)
-
----
-
-## Executive Project Presentation
-
-This slide deck provides a business-focused overview of the analysis, highlighting key customer insights, modeling results, and strategic recommendations.
-
-👉 [View Business Insights & Strategy Deck](https://drive.google.com/file/d/1Gg1WW2XOQD5-wljZgJaezi8YqN10Y6NI/view?usp=drive_link)
+**Data Source:** [Kaggle — H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data)
 
 ---
 
-# Table of Contents
-
-1. [Project Overview](#project-overview)  
-2. [Data Processing Pipeline](#data-processing-pipeline)  
-   - [Data Sources](#data-sources) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))  
-   - [Cleaning and Preprocessing](#cleaning-and-preprocessing) (from [`01_Data_Preprocessing.ipynb`](01_Data_Preprocessing.ipynb))  
-   - [Feature Engineering](#feature-engineering) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
-   - [Train / Validation / Test Split](#train-validation-test-split) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
-3. [Modeling and Evaluation](#modeling-and-evaluation)  
-   - [Models Evaluated](#models-evaluated) (from [`02_Jewelry_Model_Finalised.ipynb`](02_Jewelry_Model_Finalised.ipynb))  
-   - [Threshold Selection Strategy](#threshold-selection-strategy)  
-   - [Neural Network Hyperparameter Tuning](#neural-network-hyperparameter-tuning)  
-   - [Final Model Evaluation](#final-model-evaluation)  
-4. [Findings Summary](#findings-summary)  
-5. [Reproducibility Instructions](#reproducibility-instructions)
+## Table of Contents
+1. [Project Overview](#1-project-overview)
+2. [Dataset Description](#2-dataset-description)
+3. [Problem Statement](#3-problem-statement)
+4. [Methodology & Modeling Steps](#4-methodology--modeling-steps)
+5. [Evaluation Metrics & Results](#5-evaluation-metrics--results)
+6. [Key Business Insights](#6-key-business-insights)
+7. [Tools & Libraries](#7-tools--libraries)
+8. [How to Run](#8-how-to-run)
 
 ---
 
-# Project Overview
+## 1. Project Overview
 
-Jewelry products represent a valuable segment within the fashion retail market. Understanding which customers are most likely to purchase jewelry allows retailers to design targeted marketing campaigns and improve product positioning.
+This project builds a **binary classification model** to predict jewelry purchase propensity at the transaction level: given a customer's current transaction and full purchase history, will their **next** transaction be a jewelry purchase?
 
-This project builds a **machine learning pipeline to predict jewelry purchase propensity** using the H&M transaction dataset. Transaction-level purchase records are transformed into customer-level behavioral features and used to train multiple classification models.
+The model is designed to support data-driven marketing decisions — enabling the business to identify high-propensity customers for targeted jewelry campaigns with measurably higher conversion rates than random outreach.
 
-The goals of the project are:
-
-- Identify behavioral signals associated with jewelry purchasing
-- Compare multiple machine learning models
-- Implement a structured evaluation framework
-- Demonstrate a reproducible machine learning workflow
+**Key challenges addressed:**
+- Severe class imbalance (1.3% positive rate, ~78:1 ratio)
+- Preventing data leakage through strict temporal feature construction
+- Selecting evaluation metrics appropriate for imbalanced, business-facing use cases (PR-AUC, Top-K Lift)
 
 ---
 
-# Data Processing Pipeline
+## 2. Dataset Description
 
-**Skills Used:** `Pandas`, Unix File Handling (`awk`)
+Three linked datasets from the H&M Kaggle competition, spanning **September 2018 – September 2020**:
 
-The raw H&M transaction dataset is extremely large. To enable efficient analysis, a **streaming Unix pipeline using `awk`** was used to downsample approximately 10% of the dataset without loading the full file into memory.
+| Dataset | Rows | Columns | Key Fields |
+|---|---|---|---|
+| Customers | 1,371,980 | 8 | `customer_id`, `age`, `club_member_status`, `fashion_news_frequency` |
+| Articles | 105,542 | 26 | `article_id`, `product_type_name`, `product_group_name`, `color_group_name` |
+| Transactions | 3,178,778 | 6 | `t_dat`, `customer_id`, `article_id`, `price`, `primary_sales_channel` |
 
-The preprocessing pipeline is implemented in: 01_Data_Preprocessing.ipynb
+**Jewelry product breakdown** (2,409 items, 2.28% of catalog):
 
+| Type | Count |
+|---|---|
+| Earring | 1,159 |
+| Necklace | 581 |
+| Ring | 240 |
+| Hair string | 238 |
+| Bracelet | 180 |
 
----
-
-## Data Sources
-
-The analysis integrates three primary datasets:
-
-### Customers Dataset
-
-Contains customer demographic information and unique identifiers.
-
-### Articles Dataset
-
-Includes product metadata such as:
-
-- product type  
-- product group name  
-- article description  
-
-These attributes are used to identify jewelry items.
-
-### Transactions Dataset
-
-Contains transaction-level purchase records including:
-
-- `customer_id`
-- `article_id`
-- `price`
-- `transaction_date`
+The **transaction-level ML dataset** contains **2,357,449 observations** across 821,329 unique customers (customers with at least 1 transaction).
 
 ---
 
-## Cleaning and Preprocessing
+## 3. Problem Statement
 
-Key preprocessing steps include:
+### Class Imbalance
+Jewelry purchases account for only **1.3% of all transactions** (29,850 positive vs. 2,327,599 negative), a ~78:1 class ratio. Standard accuracy is misleading here — a model predicting "never jewelry" achieves ~98.7% accuracy while being entirely useless for targeting.
 
-### Column Standardization
+**Mitigation strategies applied:**
+- `class_weight='balanced'` in all models (inverse-frequency weighting)
+- Stratified train/val/test splits to preserve class distribution
+- Threshold-independent metrics: ROC-AUC and PR-AUC
+- Business-oriented Top-K Lift evaluation (1% and 2% targeting thresholds)
 
-Column names were standardized by:
+### Data Leakage Prevention
+The target is defined as whether the customer's **next** transaction is jewelry — so each observation must only contain information from **prior** transactions.
 
-- converting to lowercase  
-- removing whitespace  
-- replacing spaces with underscores  
-
-### Handling Missing Values
-
-Missing values were handled using:
-
-- mean or median imputation for numeric columns
-- removal of rows with excessive missing data
-
-### Type Conversion
-
-Date columns were converted to `datetime` format to support temporal feature extraction.
+**Safeguards implemented:**
+- All features are aggregated strictly from historical transactions (before the current row)
+- The **last transaction per customer is dropped** (no future label available)
+- All preprocessing (imputation, encoding) is **fit on training data only**, then applied to validation and test sets
+- Recency is measured as days since the *previous* transaction, not the current one
 
 ---
 
-## Feature Engineering
+## 4. Methodology & Modeling Steps
 
-Transaction-level data was aggregated into **customer-level behavioral features**.
+### Step 1 — Data Preprocessing (`01_Data_Preprocessing.ipynb`)
+- Standardized column names and data types (`datetime`, `float32`, `Int8`)
+- Handled missing values: median imputation for numeric, most-frequent for categorical
+- Downsampled the raw transaction file (3.1M+ rows) using in-place Unix `awk` streaming to avoid memory bottlenecks
 
-Feature categories include:
+### Step 2 — Feature Engineering (`02_Jewelry_Model_Finalised.ipynb`)
+Features are built at three levels and joined at the transaction level:
 
-- purchase frequency
-- total spending
-- average purchase value
-- product diversity
+**Customer-level (14 features):**
+- Purchase behavior: `purchase_frequency`, `total_spending`, `average_order_value`, `recency_days`
+- Jewelry history: `jewelry_purchase_count`, `jewelry_total_spending`, `jewelry_avg_price`
+- Demographics: `age`, `age_group` (7 bins), `club_member_status`, `fashion_news_frequency`
+- Channel preference: `primary_sales_channel`
 
-Example aggregation logic:
+**Product-level (34 features):**
+- Category metadata: `product_group`, `department`, `color_group`
+- Popularity: `purchase_count`, `total_revenue`, `unique_customers_reached`
 
-```python
-customer_features = transactions.groupby("customer_id").agg({
-    "price": ["count", "sum", "mean"],
-    "article_id": "nunique"
-})
-These features form the model input matrix used for training machine learning classifiers.
+**Interaction-level:**
+- Customer × category recency (days since last purchase per category)
+- Product diversity metrics: avg 3.7 unique categories, 2.2 product groups, 8.1 unique products per customer
 
-## Train / Validation / Test Split
+### Step 3 — ML Dataset Design
+- Unit of observation: **transaction-level** (each row = one transaction event)
+- Target variable: `next_is_jewelry` (binary, 1 if the customer's next transaction is jewelry)
+- Final dataset: 2,357,449 rows × engineered feature set
 
-The dataset is divided using a **stratified split** to ensure class balance across all subsets.
+### Step 4 — Train/Validation/Test Split
+Stratified split preserving the 1.3% positive rate:
 
-| Dataset | Purpose |
-|--------|--------|
-| Train (70%) | Model training |
-| Validation (15%) | Threshold selection and model tuning |
-| Test (15%) | Final model evaluation |
+| Split | Rows |
+|---|---|
+| Train (70%) | 1,650,214 |
+| Validation (15%) | 353,617 |
+| Test (15%) | 353,618 |
 
-Stratification ensures that the proportion of positive and negative classes remains consistent across splits.
+Models were trained on train set, tuned on validation, then retrained on train+validation before final test evaluation.
 
-This design prevents **data leakage** and allows unbiased evaluation on unseen data.
+### Step 5 — Models
 
----
+**Logistic Regression (baseline):**
+- `solver='lbfgs'`, `max_iter=1000`, `class_weight='balanced'`
+- Establishes a linear probability baseline; interpretable log-odds coefficients
 
-# Modeling and Evaluation
-
-The modeling workflow is implemented in:
-
-`02_Jewelry_Model_Finalised.ipynb`
-
-Multiple machine learning models are trained and compared using a consistent evaluation framework.
-
----
-
-## Models Evaluated
-
-Four classification models were evaluated.
-
-### Logistic Regression
-A linear baseline classifier that provides strong interpretability and serves as a benchmark model.
-
-### Decision Tree
-A tree-based classifier capable of generating interpretable decision rules based on feature splits.
-
-### Random Forest
-An ensemble learning method that combines multiple decision trees to improve predictive performance and reduce overfitting.
-
-### Neural Network (MLPClassifier)
-A multi-layer perceptron capable of capturing nonlinear relationships in customer behavior patterns.
+**Decision Tree:**
+- `max_depth=4`, `min_samples_leaf=50`, `class_weight='balanced'`
+- 31 nodes / 16 leaves; fully interpretable business rules
+- Top leaf: customers with prior jewelry spending + 7+ unique products → **3.46% jewelry rate** (2.7× base rate)
 
 ---
 
-## Threshold Selection Strategy
+## 5. Evaluation Metrics & Results
 
-Most classifiers output predicted probabilities rather than class labels.
+Given severe class imbalance, evaluation focuses on **PR-AUC** and **Top-K Lift** rather than accuracy.
 
-To determine the optimal classification boundary, a **threshold sweep** was performed on the validation set for the following models:
+### Model Comparison (Test Set)
 
-- Logistic Regression  
-- Decision Tree  
-- Random Forest  
+| Metric | Logistic Regression | Decision Tree |
+|---|---|---|
+| Accuracy | 0.689 | 0.685 |
+| Precision | 0.022 | 0.021 |
+| Recall | 0.541 | 0.532 |
+| F1-Score | 0.042 | 0.041 |
+| ROC-AUC | **0.656** | 0.641 |
+| PR-AUC | **0.030** | 0.026 |
 
-Example thresholds evaluated: 0.1, 0.2, 0.3 ... 0.9
+> Accuracy is near 69% for both models — this reflects the class distribution, not meaningful signal. PR-AUC and Lift are the relevant metrics here.
 
+### Top-K Lift (Test Set, targeting top 2% of predictions)
 
-Performance metrics such as **precision, recall, and F1-score** were evaluated across thresholds to determine the most suitable operating point.
+| Model | Precision@2% | Recall@2% | Lift |
+|---|---|---|---|
+| Logistic Regression | 6.2% | 9.8% | **4.9×** |
+| Decision Tree | 6.5% | 10.3% | **5.1×** |
 
-The selected threshold was then applied when evaluating the model on the test dataset.
-
----
-
-## Neural Network Hyperparameter Tuning
-
-Unlike the other models, the neural network was tuned using **RandomizedSearchCV**.
-
-The workflow was:
-
-1. Perform hyperparameter search using the validation fold  
-2. Identify the best hyperparameter configuration  
-3. Retrain the neural network using **Train + Validation data**  
-4. Evaluate the final model on the **held-out test set**
-
-This approach ensures that the test dataset remains completely unseen during model selection.
+**Interpretation:** By targeting the top 2% of customers ranked by model score, the business captures **5× more jewelry buyers** than random outreach — making every marketing dollar roughly 5 times more efficient.
 
 ---
 
-## Final Model Evaluation
+## 6. Key Business Insights
 
-Model performance is evaluated using multiple metrics:
+1. **Use a low prediction threshold (1–2%) for campaign targeting** rather than the default 0.5 cutoff. This delivers 6–7% precision with 5× lift — a practical trade-off between reach and targeting efficiency.
 
-- Accuracy
-- Precision
-- Recall
-- F1 Score
-- ROC-AUC
-- PR-AUC
+2. **Prior jewelry spend is the strongest signal.** Customers with any jewelry purchase history and 7+ unique products purchased have a jewelry propensity rate of 3.46% — nearly 3× the base rate.
 
-Final model comparison is performed **only on the test set** to ensure unbiased out-of-sample performance estimation.
+3. **Channel 2 customers show higher jewelry propensity.** Channel-specific marketing (e.g., online vs. in-store) can further improve targeting precision.
 
----
+4. **Decision Tree is preferred for business deployment** due to full interpretability. Decision rules can be validated and explained to non-technical stakeholders (e.g., "target customers aged <37 with prior jewelry spending and diverse product history").
 
-# Findings Summary
-
-| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC |
-|------|------|------|------|------|------|
-| Logistic Regression | 0.688458 | 0.021912 | 0.540866 | 0.042118 | 0.656260 |
-| Neural Network (best params) | 0.745550 | 0.023273 | 0.466056 | 0.044333 | 0.654290 |
-| Decision Tree | 0.685353 | 0.021345 | 0.531711 | 0.041042 | 0.640591 |
-| Random Forest | 0.787717 | 0.023890 | 0.395489 | 0.045058 | 0.635691 |
-| **Best Model** | **Random Forest** | **0.023890** | **0.395489** | **0.045058** | **0.635691** |
-
-
-Actual results can be reproduced by executing the modeling notebook.
-
-General observations include:
-
-- Ensemble models typically outperform single decision trees.
-- Logistic regression provides strong baseline interpretability.
-- Neural networks capture nonlinear behavioral signals but require careful tuning.
+5. **Age segmentation matters.** Customers aged ≤33–37 exhibit different purchase propensity patterns and should receive tailored messaging.
 
 ---
 
-# Reproducibility Instructions
+## 7. Tools & Libraries
 
-To reproduce the analysis:
+| Category | Tools |
+|---|---|
+| Data Manipulation | `pandas`, `numpy` |
+| Machine Learning | `scikit-learn` 1.7.0 (LogisticRegression, DecisionTreeClassifier, Pipeline, ColumnTransformer, SimpleImputer, OneHotEncoder) |
+| Evaluation | `sklearn.metrics`: `roc_auc_score`, `average_precision_score`, `precision_recall_curve`, `confusion_matrix` |
+| Visualization | `matplotlib`, `seaborn` |
+| Environment | Google Colab, Python 3.12 |
+| Data Engineering | Unix `awk` (in-place streaming downsampling) |
 
-### 1. Install Dependencies
+---
+
+## 8. How to Run
+
+### Prerequisites
+```bash
 pip install -r requirements.txt
+```
 
-### 2. Run the Notebooks
+### Data Setup
+Download the raw data from [Kaggle](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) and place the files in the `data/` directory:
+```
+data/
+├── customers.csv
+├── articles.csv
+└── transactions_train.csv
+```
 
-Execute the notebooks in the following order:
+### Run Notebooks in Order
+```
+1. 01_Data_Preprocessing.ipynb   — Clean raw data, downsample transactions, save processed files
+2. 02_Jewelry_Model_Finalised.ipynb  — Feature engineering, model training, evaluation
+```
 
-01_Data_Preprocessing.ipynb
-02_Jewelry_Model_Finalised.ipynb
+> Both notebooks are designed to run on **Google Colab** with data stored on Google Drive. Update the `DRIVE_PATH` variable at the top of each notebook to match your Drive directory.
 
-
-
-The preprocessing notebook prepares the modeling dataset.
-
-The modeling notebook performs:
-
-- train / validation / test split  
-- model training  
-- threshold sweep  
-- neural network hyperparameter tuning  
-- final test evaluation  
-
----
-
-### 3. Verify Results
-
-Outputs generated in the notebook should match the evaluation metrics summarized in this repository.
+### Expected Outputs
+- Processed feature datasets saved to `data/processed/`
+- Model evaluation metrics printed inline (accuracy, PR-AUC, ROC-AUC, Top-K Lift)
+- ROC and Precision-Recall curve plots
 
 ---
 
-# Project Significance
-
-This project demonstrates a complete applied machine learning workflow including:
-
-- large-scale data preprocessing
-- feature engineering from transactional retail data
-- structured model comparison
-- hyperparameter tuning
-- unbiased out-of-sample evaluation
-
-The methodology reflects best practices used in real-world retail analytics and predictive modeling.
-
-This project reflects Serena Chou’s commitment to methodological rigor, clear communication, and impactful data analysis. For any questions or feedback, please feel free to open an issue in this repository.
+*This project reflects a commitment to methodological rigor — from leakage-free feature design to business-grounded evaluation. For questions or feedback, feel free to open an issue or reach out via [LinkedIn](https://www.linkedin.com/in/serena-chou-6a3701184).*
