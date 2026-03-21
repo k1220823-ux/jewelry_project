@@ -32,6 +32,7 @@ The model is designed to support data-driven marketing decisions — enabling th
 - Severe class imbalance (1.3% positive rate, ~78:1 ratio)
 - Preventing data leakage through strict temporal feature construction
 - Selecting evaluation metrics appropriate for imbalanced, business-facing use cases (PR-AUC, Top-K Lift)
+- Comparing four model families: linear baseline, tree-based, ensemble, and neural network
 
 ---
 
@@ -55,20 +56,20 @@ Three linked datasets from the H&M Kaggle competition, spanning **September 2018
 | Hair string | 238 |
 | Bracelet | 180 |
 
-The **transaction-level ML dataset** contains **2,357,449 observations** across 821,329 unique customers (customers with at least 1 transaction).
+The **transaction-level ML dataset** contains **2,357,449 observations** across 821,329 unique customers.
 
 ---
 
 ## 3. Problem Statement
 
 ### Class Imbalance
-Jewelry purchases account for only **1.3% of all transactions** (29,850 positive vs. 2,327,599 negative), a ~78:1 class ratio. Standard accuracy is misleading here — a model predicting "never jewelry" achieves ~98.7% accuracy while being entirely useless for targeting.
+Jewelry purchases account for only **1.3% of all transactions** (29,850 positive vs. 2,327,599 negative), a ~78:1 class ratio. Standard accuracy is misleading — a model predicting "never jewelry" would achieve ~98.7% accuracy while being completely useless for targeting.
 
 **Mitigation strategies applied:**
 - `class_weight='balanced'` in all models (inverse-frequency weighting)
 - Stratified train/val/test splits to preserve class distribution
 - Threshold-independent metrics: ROC-AUC and PR-AUC
-- Business-oriented Top-K Lift evaluation (1% and 2% targeting thresholds)
+- Business-oriented Top-K Lift evaluation at 0.5%, 1%, and 2% targeting thresholds
 
 ### Data Leakage Prevention
 The target is defined as whether the customer's **next** transaction is jewelry — so each observation must only contain information from **prior** transactions.
@@ -77,7 +78,7 @@ The target is defined as whether the customer's **next** transaction is jewelry 
 - All features are aggregated strictly from historical transactions (before the current row)
 - The **last transaction per customer is dropped** (no future label available)
 - All preprocessing (imputation, encoding) is **fit on training data only**, then applied to validation and test sets
-- Recency is measured as days since the *previous* transaction, not the current one
+- Recency is calculated as days since the *previous* transaction, not the current one
 
 ---
 
@@ -108,7 +109,7 @@ Features are built at three levels and joined at the transaction level:
 ### Step 3 — ML Dataset Design
 - Unit of observation: **transaction-level** (each row = one transaction event)
 - Target variable: `next_is_jewelry` (binary, 1 if the customer's next transaction is jewelry)
-- Final dataset: 2,357,449 rows × engineered feature set
+- Final dataset: 2,357,449 rows
 
 ### Step 4 — Train/Validation/Test Split
 Stratified split preserving the 1.3% positive rate:
@@ -119,9 +120,9 @@ Stratified split preserving the 1.3% positive rate:
 | Validation (15%) | 353,617 |
 | Test (15%) | 353,618 |
 
-Models were trained on train set, tuned on validation, then retrained on train+validation before final test evaluation.
+Models were trained on the train set, tuned on validation, then retrained on train+validation before final test evaluation.
 
-### Step 5 — Models
+### Step 5 — Models Trained
 
 **Logistic Regression (baseline):**
 - `solver='lbfgs'`, `max_iter=1000`, `class_weight='balanced'`
@@ -132,6 +133,14 @@ Models were trained on train set, tuned on validation, then retrained on train+v
 - 31 nodes / 16 leaves; fully interpretable business rules
 - Top leaf: customers with prior jewelry spending + 7+ unique products → **3.46% jewelry rate** (2.7× base rate)
 
+**Random Forest:**
+- `n_estimators=200`, `max_depth=20`, `min_samples_leaf=50`, `class_weight='balanced'`
+- Ensemble of 200 trees to reduce variance and capture non-linear patterns
+
+**MLP Neural Network (with hyperparameter search):**
+- 20-trial random search over hidden layer sizes, activation functions, learning rate, L2 regularization, and batch size
+- Best configuration: single hidden layer of 128 neurons, `tanh` activation, `learning_rate_init=0.0004`, `batch_size=256`, `max_iter=150`
+
 ---
 
 ## 5. Evaluation Metrics & Results
@@ -140,39 +149,46 @@ Given severe class imbalance, evaluation focuses on **PR-AUC** and **Top-K Lift*
 
 ### Model Comparison (Test Set)
 
-| Metric | Logistic Regression | Decision Tree |
-|---|---|---|
-| Accuracy | 0.689 | 0.685 |
-| Precision | 0.022 | 0.021 |
-| Recall | 0.541 | 0.532 |
-| F1-Score | 0.042 | 0.041 |
-| ROC-AUC | **0.656** | 0.641 |
-| PR-AUC | **0.030** | 0.026 |
+| Metric | Logistic Regression | Decision Tree | Random Forest | MLP Neural Network |
+|---|---|---|---|---|
+| Accuracy | 0.689 | 0.685 | 0.788 | 0.746 |
+| Precision | 0.022 | 0.021 | 0.024 | 0.023 |
+| Recall | **0.541** | 0.532 | 0.396 | 0.466 |
+| F1-Score | 0.042 | 0.041 | 0.045 | **0.044** |
+| ROC-AUC | **0.656** | 0.641 | 0.636 | 0.654 |
+| PR-AUC | 0.030 | 0.026 | 0.028 | **0.031** |
 
-> Accuracy is near 69% for both models — this reflects the class distribution, not meaningful signal. PR-AUC and Lift are the relevant metrics here.
+> Note: Random Forest shows the highest raw accuracy (78.8%), but this is driven by its conservative positive predictions — it recalls fewer jewelry buyers. ROC-AUC and PR-AUC are the meaningful metrics here.
 
-### Top-K Lift (Test Set, targeting top 2% of predictions)
+### Top-K Lift (Test Set)
 
-| Model | Precision@2% | Recall@2% | Lift |
+| Model | Lift @ 0.5% | Lift @ 1% | Lift @ 2% |
 |---|---|---|---|
-| Logistic Regression | 6.2% | 9.8% | **4.9×** |
-| Decision Tree | 6.5% | 10.3% | **5.1×** |
+| Logistic Regression | 5.9× | 5.9× | 4.9× |
+| Decision Tree | **6.7×** | 6.3× | 5.1× |
+| MLP Neural Network | **7.5×** | 6.4× | 5.0× |
 
-**Interpretation:** By targeting the top 2% of customers ranked by model score, the business captures **5× more jewelry buyers** than random outreach — making every marketing dollar roughly 5 times more efficient.
+> **MLP achieves the highest Top-K Lift at 0.5% (7.5×)**: targeting the top 0.5% of customers by model score captures jewelry buyers at 7.5× the rate of random selection.
+
+**Interpretation for marketing:** By targeting the top 1–2% of customers ranked by model score, the business captures **5–7× more jewelry buyers** than random outreach — making each marketing impression significantly more efficient.
 
 ---
 
 ## 6. Key Business Insights
 
-1. **Use a low prediction threshold (1–2%) for campaign targeting** rather than the default 0.5 cutoff. This delivers 6–7% precision with 5× lift — a practical trade-off between reach and targeting efficiency.
+1. **MLP delivers the best targeting precision at tight budgets.** At a 0.5% reach threshold (e.g., a small SMS campaign), the MLP's 7.5× lift means 7.5 times more conversions per message sent compared to no model.
 
-2. **Prior jewelry spend is the strongest signal.** Customers with any jewelry purchase history and 7+ unique products purchased have a jewelry propensity rate of 3.46% — nearly 3× the base rate.
+2. **Logistic Regression remains the best overall discriminator** (highest ROC-AUC: 0.656) and provides the highest recall (54.1%), making it suitable when broad coverage of jewelry buyers matters more than precision.
 
-3. **Channel 2 customers show higher jewelry propensity.** Channel-specific marketing (e.g., online vs. in-store) can further improve targeting precision.
+3. **Prior jewelry spend is the strongest signal.** Customers with any jewelry purchase history and 7+ unique products purchased have a jewelry propensity of 3.46% — nearly 3× the base rate.
 
-4. **Decision Tree is preferred for business deployment** due to full interpretability. Decision rules can be validated and explained to non-technical stakeholders (e.g., "target customers aged <37 with prior jewelry spending and diverse product history").
+4. **Random Forest's high accuracy is misleading.** Its 78.8% accuracy comes from predicting fewer positives more conservatively — it has the lowest recall (39.6%) and lower ROC-AUC than both LR and MLP.
 
-5. **Age segmentation matters.** Customers aged ≤33–37 exhibit different purchase propensity patterns and should receive tailored messaging.
+5. **Decision Tree is preferred for business deployment** due to full interpretability. Decision rules can be validated and explained to non-technical stakeholders (e.g., "target customers aged <37 with prior jewelry spending and diverse product history").
+
+6. **Channel 2 customers show higher jewelry propensity.** Channel-specific marketing (e.g., online vs. in-store) can further improve targeting precision.
+
+7. **Age segmentation matters.** Customers aged ≤33–37 exhibit different purchase propensity patterns and should receive tailored messaging.
 
 ---
 
@@ -181,8 +197,9 @@ Given severe class imbalance, evaluation focuses on **PR-AUC** and **Top-K Lift*
 | Category | Tools |
 |---|---|
 | Data Manipulation | `pandas`, `numpy` |
-| Machine Learning | `scikit-learn` 1.7.0 (LogisticRegression, DecisionTreeClassifier, Pipeline, ColumnTransformer, SimpleImputer, OneHotEncoder) |
-| Evaluation | `sklearn.metrics`: `roc_auc_score`, `average_precision_score`, `precision_recall_curve`, `confusion_matrix` |
+| Machine Learning | `scikit-learn` 1.7.0 — `LogisticRegression`, `DecisionTreeClassifier`, `RandomForestClassifier`, `MLPClassifier`, `Pipeline`, `ColumnTransformer`, `SimpleImputer`, `OneHotEncoder` |
+| Hyperparameter Tuning | `sklearn` random search (20 trials for MLP) |
+| Evaluation | `roc_auc_score`, `average_precision_score`, `precision_recall_curve`, `confusion_matrix` |
 | Visualization | `matplotlib`, `seaborn` |
 | Environment | Google Colab, Python 3.12 |
 | Data Engineering | Unix `awk` (in-place streaming downsampling) |
@@ -207,8 +224,8 @@ data/
 
 ### Run Notebooks in Order
 ```
-1. 01_Data_Preprocessing.ipynb   — Clean raw data, downsample transactions, save processed files
-2. 02_Jewelry_Model_Finalised.ipynb  — Feature engineering, model training, evaluation
+1. 01_Data_Preprocessing.ipynb        — Clean raw data, downsample transactions, save processed files
+2. 02_Jewelry_Model_Finalised.ipynb   — Feature engineering, model training, evaluation (all 4 models)
 ```
 
 > Both notebooks are designed to run on **Google Colab** with data stored on Google Drive. Update the `DRIVE_PATH` variable at the top of each notebook to match your Drive directory.
@@ -216,7 +233,7 @@ data/
 ### Expected Outputs
 - Processed feature datasets saved to `data/processed/`
 - Model evaluation metrics printed inline (accuracy, PR-AUC, ROC-AUC, Top-K Lift)
-- ROC and Precision-Recall curve plots
+- ROC curve and Precision-Recall curve plots for all models
 
 ---
 
